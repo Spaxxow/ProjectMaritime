@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "FCxr0/wKWo0zSBHL3zZn+Cp296rDkf/tvcU15CIxOFxxow91nt3eAZmgJuTaQTrgJ41UJZwkY8jwwfE06TIWmQ==",
+  "success": true,
+  "projectFilePath": "c:\\GAMES\\Rimworld\\Mods\\ProjectMaritime\\Source\\SimplyShips\\SimplyShips.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Vova\\.nuget\\packages\\krafs.rimworld.ref\\1.2.2753\\krafs.rimworld.ref.1.2.2753.nupkg.sha512",
+    "C:\\Users\\Vova\\.nuget\\packages\\lib.harmony\\2.0.4\\lib.harmony.2.0.4.nupkg.sha512"
+  ],
+  "logs": []
+}

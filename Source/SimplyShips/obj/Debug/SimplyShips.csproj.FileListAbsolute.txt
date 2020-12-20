@@ -1,0 +1,7 @@
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Assemblies\SimplyShips.dll
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Assemblies\SimplyShips.pdb
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Source\SimplyShips\obj\Debug\SimplyShips.csprojAssemblyReference.cache
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Source\SimplyShips\obj\Debug\SimplyShips.csproj.CoreCompileInputs.cache
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Source\SimplyShips\obj\Debug\SimplyShips.csproj.CopyComplete
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Source\SimplyShips\obj\Debug\SimplyShips.dll
+c:\GAMES\Rimworld\Mods\ProjectMaritime\Source\SimplyShips\obj\Debug\SimplyShips.pdb
