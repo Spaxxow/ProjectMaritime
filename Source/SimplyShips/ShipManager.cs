@@ -48,17 +48,25 @@ namespace SimplyShips
             ships.Remove(ship);
         }
 
-        //public override void WorldComponentTick()
-        //{
-        //    base.WorldComponentTick();
-        //    if (GenTicks.TicksGame % 60 == 0)
-        //    {
-        //        foreach (var ship in ships)
-        //        {
-        //            Log.Message(ship + " - " + ship);
-        //        }
-        //    }
-        //}
+        bool update;
+        public override void FinalizeInit()
+        {
+            base.FinalizeInit();
+
+        }
+
+        public override void WorldComponentTick()
+        {
+            base.WorldComponentTick();
+            if (!update)
+            {
+                foreach (var ship in ships)
+                {
+                    ship.SpawnSetup();
+                }
+                update = true;
+            }
+        }
 
         private List<Ship> ships;
         public override void ExposeData()

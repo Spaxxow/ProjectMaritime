@@ -14,5 +14,6 @@ namespace SimplyShips
     {
         public static TerrainDef SS_Deck;
         public static TerrainAffordanceDef SS_Water;
+        public static ThingDef SS_Helm;
     }
 }

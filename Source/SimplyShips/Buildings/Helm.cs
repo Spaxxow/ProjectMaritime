@@ -12,13 +12,27 @@ namespace SimplyShips
     public class Helm : Building
     {
         private ShipManager shipManager;
+        private Ship shipParent;
         public override void SpawnSetup(Map map, bool respawningAfterLoad)
         {
             base.SpawnSetup(map, respawningAfterLoad);
             this.shipManager = Find.World.GetComponent<ShipManager>();
-            if (!shipManager.TryFindShipParent(this, out Ship ship))
+            if (shipManager.TryFindShipParent(this, out Ship ship))
             {
-                MakeShip();
+                this.shipParent = ship;
+            }
+            else
+            {
+                this.shipParent = MakeShip();
+            }
+        }
+
+        public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
+        {
+            base.Destroy(mode);
+            if (shipParent.helm == this)
+            {
+                shipManager.DeregisterShip(shipParent);
             }
         }
         public override IEnumerable<Gizmo> GetGizmos()
@@ -33,23 +47,29 @@ namespace SimplyShips
                 defaultDesc = "SS.CommandSetLocalRouteDesc".Translate(),
                 hotKey = KeyBindingDefOf.Misc12,
                 map = this.Map,
+                ship = this.shipParent,
                 action = StartRoute
             };
         }
 
         private void StartRoute(IntVec3 cell)
         {
-            if (!shipManager.TryFindShipParent(this, out Ship ship))
+            if (shipManager.TryFindShipParent(this, out Ship ship))
             {
-                ship = MakeShip();
+                this.shipParent = ship;
             }
-            ship.TeleportTo(cell);
+            else
+            {
+                this.shipParent = MakeShip();
+            }
+            this.shipParent.TeleportTo(cell);
         }
+
 
         private Ship MakeShip()
         {
             var ship = new Ship(this);
-            ship.Init();
+            ship.SpawnSetup();
             shipManager.RegisterShip(ship);
             return ship;
         }

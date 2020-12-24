@@ -22,7 +22,7 @@ namespace SimplyShips
 			targetingParameters.canTargetFires = false;
 			targetingParameters.canTargetBuildings = false;
 			targetingParameters.canTargetItems = false;
-			targetingParameters.validator = ((TargetInfo x) => x.Cell.GetTerrain(map).IsWater);
+			targetingParameters.validator = (TargetInfo x) => ship.CanTeleportTo(x.Cell);
 			return targetingParameters;
 		}
 		public override void ProcessInput(Event ev)
@@ -37,6 +37,7 @@ namespace SimplyShips
 		}
 
 		public Action<IntVec3> action;
+		public Ship ship;
 
 		public Map map;
 	}
