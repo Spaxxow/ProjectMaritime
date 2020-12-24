@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 using Verse;
 
 namespace SimplyShips
@@ -77,6 +78,7 @@ namespace SimplyShips
             heightDirty = true;
 
             var waterCells = this.map.AllCells.Where(x => IsWaterOrDeck(x));
+
             var verticalWater = waterCells.GroupBy(item => item.x).Select(group => group.ToList());
             var horizontalWater = waterCells.GroupBy(item => item.z).Select(group => group.ToList());
 
@@ -120,9 +122,9 @@ namespace SimplyShips
                     xPos = cell.x;
                     newList.Add(cell);
                 }
-                if (waterList.Count > this.MaxWidth)
+                if (newList.Count > this.MaxWidth)
                 {
-                    goodHorizontalWaterCells.Add(waterList);
+                    goodHorizontalWaterCells.Add(newList.ListFullCopy());
                 }
             }
 
@@ -149,6 +151,11 @@ namespace SimplyShips
             }
         }
 
+
+        public static readonly Color CanPlaceColor = new Color(0.5f, 1f, 0.6f, 0.4f);
+
+        public static readonly Color CannotPlaceColor = new Color(1f, 0f, 0f, 0.4f);
+
         private Dictionary<IntVec3, HashSet<IntVec3>> cellsToCheck = new Dictionary<IntVec3, HashSet<IntVec3>>();
         public bool CanTeleportTo(IntVec3 dest)
         {
@@ -172,8 +179,20 @@ namespace SimplyShips
                 }
                 if (cells2.Where(x => x.z == dest.z && x.x == dest.x).Any())
                 {
+                    var rootPos = cells.First();
+                    foreach (var terrain in terrains)
+                    {
+                        var newPos = terrain.Key - rootPos + dest;
+                        ShipGhostDrawer.DrawGhostThing_NewTmp(newPos, Rot4.North, terrain.Value, terrain.Value.graphic, Designator_Place.CanPlaceColor, AltitudeLayer.Blueprint);
+                    }
                     return true;
                 }
+            }
+            var rootPos2 = cells.First();
+            foreach (var terrain in terrains)
+            {
+                var newPos = terrain.Key - rootPos2 + dest;
+                ShipGhostDrawer.DrawGhostThing_NewTmp(newPos, Rot4.North, terrain.Value, terrain.Value.graphic, Designator_Place.CannotPlaceColor, AltitudeLayer.Blueprint);
             }
             return false;
         }

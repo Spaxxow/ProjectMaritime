@@ -29,12 +29,14 @@ namespace SimplyShips
 		{
 			base.ProcessInput(ev);
 			SoundStarter.PlayOneShotOnCamera(SoundDefOf.Tick_Tiny, null);
+
 			Texture2D texture2D = ContentFinder<Texture2D>.Get("UI/Commands/PodEject", true);
 			Find.Targeter.BeginTargeting(ForShipDestination(), delegate (LocalTargetInfo target)
 			{
 				this.action(target.Cell);
 			}, null, null, texture2D);
 		}
+
 
 		public Action<IntVec3> action;
 		public Ship ship;

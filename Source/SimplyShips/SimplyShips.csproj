@@ -21,6 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -45,6 +46,7 @@
     <Compile Include="Commands\Command_SetLocalRoute.cs" />
     <Compile Include="Ship\Ship.cs" />
     <Compile Include="ShipManager.cs" />
+    <Compile Include="SS_DefOf - Copy.cs" />
     <Compile Include="SS_DefOf.cs" />
     <Compile Include="HarmonyPatches\Construct_Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
