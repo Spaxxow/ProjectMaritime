@@ -16,6 +16,7 @@ namespace SimplyShips
         {
             ships = new List<Ship>();
         }
+
         public bool TryFindShipParent(Helm helm, out Ship foundShip)
         {
             foreach (var ship in ships)

@@ -37,8 +37,26 @@ namespace SimplyShips
 			}, null, null, texture2D);
 		}
 
+        public override GizmoResult GizmoOnGUI(Vector2 topLeft, float maxWidth)
+        {
+			if (Event.current.type == EventType.KeyDown)
+			{
+				if (Event.current.keyCode == KeyCode.Q)
+				{
+					ship.RotateShip(RotationDirection.Counterclockwise, UI.MouseCell());
+					Event.current.Use();
+				}
+				else if (Event.current.keyCode == KeyCode.R)
+                {
+					ship.RotateShip(RotationDirection.Clockwise, UI.MouseCell());
+					Event.current.Use();
+				}
+			}
+			return base.GizmoOnGUI(topLeft, maxWidth);
+        }
 
-		public Action<IntVec3> action;
+
+        public Action<IntVec3> action;
 		public Ship ship;
 
 		public Map map;

@@ -2,6 +2,7 @@
 using RimWorld;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,9 +15,14 @@ namespace SimplyShips
     {
         public HashSet<IntVec3> cells = new HashSet<IntVec3>();
         private Dictionary<IntVec3, TerrainDef> terrains = new Dictionary<IntVec3, TerrainDef>();
+
+        private HashSet<IntVec3> rotatedCells = new HashSet<IntVec3>();
+        private Dictionary<IntVec3, TerrainDef> rotatedTerrains = new Dictionary<IntVec3, TerrainDef>();
+
         private HashSet<Thing> things = new HashSet<Thing>();
         private Map map;
         public Helm helm;
+        private Rot4 curRotation;
         public Ship()
         {
 
@@ -57,9 +63,9 @@ namespace SimplyShips
             }
         }
 
-        HashSet<List<IntVec3>> goodVerticalWaterCells = new HashSet<List<IntVec3>>();
-        HashSet<List<IntVec3>> goodHorizontalWaterCells = new HashSet<List<IntVec3>>();
-        public void SpawnSetup()
+        HashSet<IntVec3> goodWaterCells = new HashSet<IntVec3>();
+
+        public void ReInit()
         {
             map.floodFiller.FloodFill(helm.Position, (IntVec3 x) => x.GetTerrain(map) == SS_DefOf.SS_Deck, delegate (IntVec3 x)
             {
@@ -76,7 +82,14 @@ namespace SimplyShips
             }
             widhtDirty = true;
             heightDirty = true;
-
+        }
+        public void SpawnSetup()
+        {
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+            ReInit();
+            HashSet<List<IntVec3>> goodVerticalWaterCells = new HashSet<List<IntVec3>>();
+            HashSet<List<IntVec3>> goodHorizontalWaterCells = new HashSet<List<IntVec3>>();
             var waterCells = this.map.AllCells.Where(x => IsWaterOrDeck(x));
 
             var verticalWater = waterCells.GroupBy(item => item.x).Select(group => group.ToList());
@@ -149,8 +162,44 @@ namespace SimplyShips
                 var secondInd = firstInd + (this.MaxWidth / 2);
                 goodList.RemoveRange(firstInd, secondInd);
             }
+
+            foreach (var goodList in goodVerticalWaterCells)
+            {
+                foreach (var goodList2 in goodHorizontalWaterCells)
+                {
+                    foreach (var cell1 in goodList)
+                    {
+                        foreach (var cell2 in goodList2)
+                        {
+                            if (cell1.x == cell2.x && cell1.z == cell2.z)
+                            {
+                                goodWaterCells.Add(cell1);
+                            }
+                        }
+                    }
+                } 
+            }
+            stopWatch.Stop();
+            foreach (var terrain in terrains)
+            {
+                rotatedTerrains[terrain.Key] = terrain.Value;
+            }
+            Log.Message("Total time: " + stopWatch.Elapsed + " - good water cells" + goodWaterCells.Count);
         }
 
+        public void RotateShip(RotationDirection rotationDirection, IntVec3 dest)
+        {
+            var rootPos = rotatedTerrains.Keys.First();
+            rotatedTerrains.Clear();
+            Log.Message("--------------- " + curRotation.ToStringHuman());
+            this.curRotation = curRotation.Rotated(rotationDirection);
+            foreach (var terrain in terrains)
+            {
+                var newPos = (terrain.Key.RotatedBy(curRotation) - rootPos) + dest;
+                rotatedTerrains[newPos] = terrain.Value;
+                Log.Message(newPos + " - " + terrain.Value);
+            }
+        }
 
         public static readonly Color CanPlaceColor = new Color(0.5f, 1f, 0.6f, 0.4f);
 
@@ -180,7 +229,7 @@ namespace SimplyShips
                 if (cells2.Where(x => x.z == dest.z && x.x == dest.x).Any())
                 {
                     var rootPos = cells.First();
-                    foreach (var terrain in terrains)
+                    foreach (var terrain in rotatedTerrains)
                     {
                         var newPos = terrain.Key - rootPos + dest;
                         ShipGhostDrawer.DrawGhostThing_NewTmp(newPos, Rot4.North, terrain.Value, terrain.Value.graphic, Designator_Place.CanPlaceColor, AltitudeLayer.Blueprint);
@@ -188,49 +237,28 @@ namespace SimplyShips
                     return true;
                 }
             }
-            var rootPos2 = cells.First();
-            foreach (var terrain in terrains)
-            {
-                var newPos = terrain.Key - rootPos2 + dest;
-                ShipGhostDrawer.DrawGhostThing_NewTmp(newPos, Rot4.North, terrain.Value, terrain.Value.graphic, Designator_Place.CannotPlaceColor, AltitudeLayer.Blueprint);
-            }
             return false;
         }
 
         private bool CanPassBetween(IntVec3 cell)
         {
-            if (!FindCell(goodVerticalWaterCells, cell))
+            if (goodWaterCells.Contains(cell))
             {
-                return false;
-            }
-            if (!FindCell(goodHorizontalWaterCells, cell))
-            {
-                return false;
-            }
-            return true;
-        }
-
-        private bool FindCell(HashSet<List<IntVec3>> lists, IntVec3 cell)
-        {
-            foreach (var list in lists)
-            {
-                foreach (var c in list)
-                {
-                    if (c.z == cell.z && c.x == cell.x)
-                    {
-                        return true;
-                    }
-                } 
+                return true;
             }
             return false;
         }
-
         private bool IsWaterOrDeck(IntVec3 cell)
         {
-            var def = cell.GetTerrain(map);
-            if (def.IsWater || def == SS_DefOf.SS_Deck)
+            if (cells.Contains(cell))
             {
-                if (cell.GetEdifice(map) == null)
+                return true;
+            }
+            var def = cell.GetTerrain(map);
+            if (def.IsWater)
+            {
+                var edifice = cell.GetEdifice(map);
+                if (edifice == null)
                 {
                     return true;
                 }
@@ -278,6 +306,7 @@ namespace SimplyShips
             Scribe_Collections.Look(ref cells, "cells", LookMode.Value);
             Scribe_Values.Look(ref heightDirty, "heightDirty", true);
             Scribe_Values.Look(ref widhtDirty, "widhtDirty", true);
+            Scribe_Values.Look(ref curRotation, "curRotation", Rot4.South);
         }
 
         private List<IntVec3> intVecKeys;
