@@ -13,13 +13,11 @@ namespace SimplyShips
 {
     public class Ship : IExposable
     {
-        public HashSet<IntVec3> cells = new HashSet<IntVec3>();
-        private Dictionary<IntVec3, TerrainDef> terrains = new Dictionary<IntVec3, TerrainDef>();
-
-        private HashSet<IntVec3> rotatedCells = new HashSet<IntVec3>();
+        public Dictionary<IntVec3, TerrainDef> terrains = new Dictionary<IntVec3, TerrainDef>();
+        private Dictionary<IntVec3, List<Thing>> cellsWithThings = new Dictionary<IntVec3, List<Thing>>();
         private Dictionary<IntVec3, TerrainDef> rotatedTerrains = new Dictionary<IntVec3, TerrainDef>();
+        private Dictionary<IntVec3, List<Thing>> rotatedCellsWithThings = new Dictionary<IntVec3, List<Thing>>();
 
-        private HashSet<Thing> things = new HashSet<Thing>();
         private Map map;
         public Helm helm;
         private Rot4 curRotation;
@@ -41,7 +39,7 @@ namespace SimplyShips
             {
                 if (heightDirty)
                 {
-                    maxHeightCached = cells.GroupBy(item => item.x).Select(group => group.ToList()).ToList().OrderByDescending(x => x.Count).FirstOrDefault().Count();
+                    maxHeightCached = terrains.Keys.GroupBy(item => item.x).Select(group => group.ToList()).ToList().OrderByDescending(x => x.Count).FirstOrDefault().Count();
                     heightDirty = false;
                 }
                 return maxHeightCached;
@@ -56,7 +54,7 @@ namespace SimplyShips
             {
                 if (widhtDirty)
                 {
-                    maxWidhtCached = cells.GroupBy(item => item.z).Select(group => group.ToList()).ToList().OrderByDescending(x => x.Count).FirstOrDefault().Count();
+                    maxWidhtCached = terrains.Keys.GroupBy(item => item.z).Select(group => group.ToList()).ToList().OrderByDescending(x => x.Count).FirstOrDefault().Count();
                     widhtDirty = false;
                 }
                 return maxWidhtCached;
@@ -67,22 +65,49 @@ namespace SimplyShips
 
         public void ReInit()
         {
+            terrains.Clear();
+            if (cellsWithThings != null)
+            {
+                cellsWithThings.Clear();
+            }
+            else
+            {
+                cellsWithThings = new Dictionary<IntVec3, List<Thing>>();
+            }
+
             map.floodFiller.FloodFill(helm.Position, (IntVec3 x) => x.GetTerrain(map) == SS_DefOf.SS_Deck, delegate (IntVec3 x)
             {
-                cells.Add(x);
+                terrains[x] = x.GetTerrain(map);
             });
 
-            foreach (var cell in cells)
+            foreach (var cell in terrains.Keys)
             {
                 foreach (var t in cell.GetThingList(map))
                 {
-                    things.Add(t);
+                    if (cellsWithThings.ContainsKey(cell))
+                    {
+                        cellsWithThings[cell].Add(t);
+                    }
+                    else
+                    {
+                        cellsWithThings[cell] = new List<Thing>() { t };
+                    }
                 }
-                terrains[cell] = cell.GetTerrain(map);
             }
             widhtDirty = true;
             heightDirty = true;
+            rotatedTerrains.Clear();
+            foreach (var terrain in terrains)
+            {
+                rotatedTerrains[terrain.Key] = terrain.Value;
+            }
+            rotatedCellsWithThings.Clear();
+            foreach (var thing in cellsWithThings)
+            {
+                rotatedCellsWithThings[thing.Key] = thing.Value;
+            }
         }
+
         public void SpawnSetup()
         {
             var stopWatch = new Stopwatch();
@@ -180,24 +205,22 @@ namespace SimplyShips
                 } 
             }
             stopWatch.Stop();
-            foreach (var terrain in terrains)
-            {
-                rotatedTerrains[terrain.Key] = terrain.Value;
-            }
             Log.Message("Total time: " + stopWatch.Elapsed + " - good water cells" + goodWaterCells.Count);
         }
 
-        public void RotateShip(RotationDirection rotationDirection, IntVec3 dest)
+        public void RotateShip(RotationDirection rotationDirection)
         {
-            var rootPos = rotatedTerrains.Keys.First();
-            rotatedTerrains.Clear();
-            Log.Message("--------------- " + curRotation.ToStringHuman());
             this.curRotation = curRotation.Rotated(rotationDirection);
+            var rootPos = terrains.Keys.First();
+            rotatedTerrains.Clear();
             foreach (var terrain in terrains)
             {
-                var newPos = (terrain.Key.RotatedBy(curRotation) - rootPos) + dest;
-                rotatedTerrains[newPos] = terrain.Value;
-                Log.Message(newPos + " - " + terrain.Value);
+                rotatedTerrains[(terrain.Key.RotatedBy(curRotation) - (rootPos.RotatedBy(curRotation)) + rootPos)] = terrain.Value;
+            }
+            rotatedCellsWithThings.Clear();
+            foreach (var thing in cellsWithThings)
+            {
+                rotatedCellsWithThings[(thing.Key.RotatedBy(curRotation) - (rootPos.RotatedBy(curRotation)) + rootPos)] = thing.Value;
             }
         }
 
@@ -228,11 +251,19 @@ namespace SimplyShips
                 }
                 if (cells2.Where(x => x.z == dest.z && x.x == dest.x).Any())
                 {
-                    var rootPos = cells.First();
+                    var rootPos = terrains.Keys.First();
                     foreach (var terrain in rotatedTerrains)
                     {
                         var newPos = terrain.Key - rootPos + dest;
                         ShipGhostDrawer.DrawGhostThing_NewTmp(newPos, Rot4.North, terrain.Value, terrain.Value.graphic, Designator_Place.CanPlaceColor, AltitudeLayer.Blueprint);
+                    }
+                    foreach (var list in rotatedCellsWithThings)
+                    {
+                        var newPos = list.Key - rootPos + dest;
+                        foreach (var thing in list.Value)
+                        {
+                            thing.def.graphic.Draw(newPos.ToVector3Shifted(), Rot4.North, thing, 0);
+                        } 
                     }
                     return true;
                 }
@@ -250,7 +281,7 @@ namespace SimplyShips
         }
         private bool IsWaterOrDeck(IntVec3 cell)
         {
-            if (cells.Contains(cell))
+            if (terrains.Keys.Contains(cell))
             {
                 return true;
             }
@@ -267,43 +298,38 @@ namespace SimplyShips
         }
         public void TeleportTo(IntVec3 dest)
         {
-            var rootPos = cells.First();
-            cells.Clear();
+            var rootPos = terrains.Keys.First();
             foreach (var terrain in terrains)
             {
                 map.terrainGrid.RemoveTopLayer(terrain.Key, false);
+            }
+            foreach (var terrain in rotatedTerrains)
+            {
                 var newPos = terrain.Key - rootPos + dest;
                 map.terrainGrid.SetTerrain(newPos, terrain.Value);
                 MoteMaker.MakeStaticMote(newPos, map, ThingDefOf.Mote_AirPuff, 5f);
-                cells.Add(newPos);
             }
-            foreach (var thing in things)
+            foreach (var list in cellsWithThings.Values)
             {
-                var newPos = thing.Position - rootPos + dest;
-                if (!thing.DestroyedOrNull())
+                foreach (var thing in list)
                 {
-                    thing.DeSpawn();
-                    GenSpawn.Spawn(thing, newPos, map);
+                    var newPos = thing.Position - rootPos + dest;
+                    if (!thing.DestroyedOrNull())
+                    {
+                        thing.DeSpawn();
+                        GenSpawn.Spawn(thing, newPos, map);
+                    }
                 }
             }
-            
-            terrains.Clear();
-            foreach (var cell in cells)
-            {
-                foreach (var t in cell.GetThingList(map))
-                {
-                    things.Add(t);
-                }
-                terrains[cell] = cell.GetTerrain(map);
-            }
+
+            this.ReInit();
         }
         public void ExposeData()
         {
             Scribe_References.Look(ref map, "map");
             Scribe_References.Look(ref helm, "helm");
-            Scribe_Collections.Look(ref things, "things", LookMode.Reference);
             Scribe_Collections.Look(ref terrains, "terrains", LookMode.Value, LookMode.Def, ref intVecKeys, ref terrainDefValues);
-            Scribe_Collections.Look(ref cells, "cells", LookMode.Value);
+            Scribe_Collections.Look(ref cellsWithThings, "cellsWithThings", LookMode.Value, LookMode.Reference, ref intVecKeys2, ref thingValues);
             Scribe_Values.Look(ref heightDirty, "heightDirty", true);
             Scribe_Values.Look(ref widhtDirty, "widhtDirty", true);
             Scribe_Values.Look(ref curRotation, "curRotation", Rot4.South);
@@ -311,5 +337,9 @@ namespace SimplyShips
 
         private List<IntVec3> intVecKeys;
         private List<TerrainDef> terrainDefValues;
+
+
+        private List<IntVec3> intVecKeys2;
+        private List<List<Thing>> thingValues;
     }
 }

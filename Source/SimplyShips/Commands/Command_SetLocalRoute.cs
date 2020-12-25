@@ -43,12 +43,12 @@ namespace SimplyShips
 			{
 				if (Event.current.keyCode == KeyCode.Q)
 				{
-					ship.RotateShip(RotationDirection.Counterclockwise, UI.MouseCell());
+					ship.RotateShip(RotationDirection.Counterclockwise);
 					Event.current.Use();
 				}
 				else if (Event.current.keyCode == KeyCode.R)
                 {
-					ship.RotateShip(RotationDirection.Clockwise, UI.MouseCell());
+					ship.RotateShip(RotationDirection.Clockwise);
 					Event.current.Use();
 				}
 			}

@@ -30,7 +30,7 @@ namespace SimplyShips
 
             foreach (var ship in ships)
             {
-                if (ship.cells.Contains(helm.Position))
+                if (ship.terrains.Keys.Contains(helm.Position))
                 {
                     foundShip = ship;
                     return true;
